@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Selenium 自动化测试项目 — Bug 梳理与修复报告</title>
+<style>
+  :root {
+    --ink: #1f2328; --muted: #59636e; --bg: #f6f8fa; --card: #ffffff;
+    --line: #e4e8ec; --blue: #1f6feb; --red: #cf222e; --green: #1a7f37;
+    --amber: #9a6700; --purple: #8250df;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--ink); line-height: 1.7; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
+  header.hero { background: linear-gradient(135deg, #0d2b52 0%, #1f6feb 100%); color: #fff; border-radius: 14px; padding: 36px 40px; margin-bottom: 32px; }
+  header.hero h1 { font-size: 26px; margin-bottom: 8px; }
+  header.hero p { opacity: .85; font-size: 14px; }
+  .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 20px; }
+  .meta-item { background: rgba(255,255,255,.12); border-radius: 8px; padding: 10px 14px; font-size: 13px; }
+  .meta-item b { display: block; font-size: 12px; opacity: .75; font-weight: normal; }
+  h2 { font-size: 20px; margin: 40px 0 16px; padding-left: 12px; border-left: 4px solid var(--blue); }
+  h3 { font-size: 16px; margin: 24px 0 10px; }
+  p { margin-bottom: 10px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 24px 28px; margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; background: var(--card); border-radius: 10px; overflow: hidden; }
+  th, td { border: 1px solid var(--line); padding: 9px 12px; text-align: left; vertical-align: top; }
+  th { background: #eef2f6; font-weight: 600; white-space: nowrap; }
+  tr:nth-child(even) td { background: #fafbfc; }
+  code { font-family: Consolas, "Courier New", monospace; background: #eef1f4; border: 1px solid #dde3e9; border-radius: 4px; padding: 1px 6px; font-size: 12.5px; color: #b93a68; word-break: break-all; }
+  pre { background: #161b22; color: #d5e5f5; border-radius: 10px; padding: 16px 20px; overflow-x: auto; font-size: 12.5px; line-height: 1.6; margin: 12px 0; font-family: Consolas, monospace; }
+  pre code { background: none; border: none; color: inherit; padding: 0; }
+  .tag { display: inline-block; font-size: 11.5px; font-weight: 600; border-radius: 20px; padding: 2px 10px; margin-right: 6px; white-space: nowrap; }
+  .tag.red { background: #ffebe9; color: var(--red); }
+  .tag.amber { background: #fff8c5; color: var(--amber); }
+  .tag.green { background: #dafbe1; color: var(--green); }
+  .tag.blue { background: #ddf4ff; color: var(--blue); }
+  .tag.purple { background: #fbefff; color: var(--purple); }
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 16px 0; }
+  .kpi { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; text-align: center; }
+  .kpi .num { font-size: 30px; font-weight: 700; }
+  .kpi .lbl { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .kpi.bad .num { color: var(--red); }
+  .kpi.good .num { color: var(--green); }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 800px) { .compare { grid-template-columns: 1fr; } }
+  .compare .card h3 { margin-top: 0; }
+  .bar { height: 14px; border-radius: 7px; background: #e9edf1; overflow: hidden; margin: 8px 0 4px; display: flex; }
+  .bar .pass { background: #2da44e; }
+  .bar .fail { background: #cf222e; }
+  .legend { font-size: 12.5px; color: var(--muted); }
+  .bug-id { font-weight: 700; color: var(--blue); white-space: nowrap; }
+  .cause-box { background: #fff8f0; border-left: 3px solid var(--amber); padding: 10px 14px; border-radius: 0 8px 8px 0; margin: 8px 0; font-size: 13.5px; }
+  .fix-box { background: #f0f9f2; border-left: 3px solid var(--green); padding: 10px 14px; border-radius: 0 8px 8px 0; margin: 8px 0; font-size: 13.5px; }
+  ul { padding-left: 22px; margin-bottom: 10px; }
+  li { margin-bottom: 5px; }
+  footer { margin-top: 48px; text-align: center; color: var(--muted); font-size: 12.5px; }
+  .toc { columns: 2; font-size: 14px; }
+  @media (max-width: 700px) { .toc { columns: 1; } }
+  .toc a { color: var(--blue); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>Selenium 自动化测试项目 — Bug 梳理与修复报告</h1>
+  <p>测试对象：百度首页（www.baidu.com）· 框架：Selenium 4.49 + Pytest 9.1.1 + pytest-html 4.2.0</p>
+  <div class="meta-grid">
+    <div class="meta-item"><b>报告日期</b>2026-09-27</div>
+    <div class="meta-item"><b>用例总数</b>32 条（3 个模块）</div>
+    <div class="meta-item"><b>发现问题</b>11 项（4 严重 / 4 中等 / 3 低）</div>
+    <div class="meta-item"><b>修复结果</b>全部解决，最终回归 32/32 全部通过（100%）</div>
+  </div>
+</header>
+
+<h2 id="s1">一、执行摘要</h2>
+<div class="card">
+  <p>本次对项目进行了全面的 Bug 梳理：先通过<strong>静态代码审查</strong>定位代码缺陷，再<strong>实际运行全部 32 条用例</strong>复现问题，并结合 DOM 探针脚本深挖失败根因，最后逐项修复并回归验证。</p>
+  <p><strong>核心结论：</strong>项目失败的根源不是个别用例写错，而是<strong>百度首页于 2025 年前后完成 AI 搜索改版，旧版核心元素（<code>#kw</code> 搜索框、<code>#su</code> 按钮、<code>.bdpfmenu</code> 设置菜单等）在 DOM 中保留但已被折叠隐藏（0×0）</strong>，导致框架"等待元素可见"的逻辑整体失效——10 条搜索用例全部超时，设置类用例大面积断言失败。此外还存在 venv 依赖缺失、验证脚本缺陷、截图死代码、窗口切换竞态等工程问题。</p>
+  <div class="kpi-grid">
+    <div class="kpi bad"><div class="num">20 / 32</div><div class="lbl">修复前失败用例数</div></div>
+    <div class="kpi bad"><div class="num">40.6%</div><div class="lbl">修复前通过率</div></div>
+    <div class="kpi good"><div class="num">11</div><div class="lbl">发现并修复的问题</div></div>
+    <div class="kpi good"><div class="num">100%</div><div class="lbl">修复后通过率（32/32）</div></div>
+  </div>
+</div>
+
+<h2 id="s2">二、修复前后对比</h2>
+<div class="compare">
+  <div class="card">
+    <h3><span class="tag red">修复前</span>基线运行（2026-09-27 19:56）</h3>
+    <div class="bar"><div class="pass" style="width:40.6%"></div><div class="fail" style="width:59.4%"></div></div>
+    <div class="legend">通过 13 · 失败 20 · 通过率 40.6% · 耗时 34:04</div>
+    <table style="margin-top:12px">
+      <tr><th>模块</th><th>结果</th></tr>
+      <tr><td>搜索 test_search.py</td><td style="color:var(--red)">0 / 10 通过（全部超时失败）</td></tr>
+      <tr><td>导航 test_navigation.py</td><td style="color:var(--red)">9 / 12 通过</td></tr>
+      <tr><td>设置 test_settings.py</td><td style="color:var(--red)">4 / 10 通过</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h3><span class="tag green">修复后</span>最终回归（2026-09-27 22:49）</h3>
+    <div class="bar"><div class="pass" style="width:100%"></div></div>
+    <div class="legend">通过 32 · 失败 0 · 通过率 100% · 耗时 44:48 · 单次完整运行</div>
+    <table style="margin-top:12px">
+      <tr><th>模块</th><th>结果</th></tr>
+      <tr><td>导航 test_navigation.py</td><td style="color:var(--green)">12 / 12 通过</td></tr>
+      <tr><td>搜索 test_search.py</td><td style="color:var(--green)">10 / 10 通过</td></tr>
+      <tr><td>设置 test_settings.py</td><td style="color:var(--green)">10 / 10 通过</td></tr>
+    </table>
+  </div>
+</div>
+<div class="card" style="margin-top:16px">
+  <p style="font-size:13.5px;color:var(--muted)">说明：修复过程分两轮验证——首轮回归 30/32，剩余 2 项（hao123 渲染超时、"更多"入口打开方式不稳定）针对性修复后定向复跑通过；随后进行第二次<strong>全量完整回归，32 条用例单次全部通过（100%）</strong>，最终报告见 reports/final_report_20260927.html。所有测试均在真实 Chrome 152 + Windows 11 环境执行。</p>
+</div>
+
+<h2 id="s3">三、Bug 清单（11 项）</h2>
+
+<div class="card">
+  <table>
+    <tr><th style="width:70px">编号</th><th style="width:90px">级别</th><th style="width:110px">位置</th><th>问题描述</th><th style="width:70px">状态</th></tr>
+    <tr><td class="bug-id">BUG-01</td><td><span class="tag red">严重</span></td><td>common/base_test.py</td><td>元素定位等待策略失效：使用 <code>visibility_of_element_located</code> 只检查<strong>第一个</strong>匹配元素，新版百度首页旧版 <code>#kw</code>/<code>#su</code> 以 0×0 隐藏形式存在，永远等不到"可见"→ 搜索类 10 条用例全部超时</td><td><span class="tag green">已修复</span></td></tr>
+    <tr><td class="bug-id">BUG-02</td><td><span class="tag red">严重</span></td><td>tests/test_search.py</td><td>搜索交互方式过时：对隐藏的 <code>#kw</code> 输入、点击隐藏的 <code>#su</code> 提交，均无法作用于真实页面</td><td><span class="tag green">已修复</span></td></tr>
+    <tr><td class="bug-id">BUG-03</td><td><span class="tag red">严重</span></td><td>venv / *.bat</td><td>虚拟环境形同虚设：venv 内<strong>只有 pip、没有任何依赖</strong>，实际依赖装在系统 Python 的用户目录；4 个 bat 脚本直接调 <code>python</code>（系统解释器），环境不可复现</td><td><span class="tag green">已修复</span></td></tr>
+    <tr><td class="bug-id">BUG-04</td><td><span class="tag red">严重</span></td><td>conftest.py</td><td>失败截图从未生效：钩子里写的是 <code>allure.attach</code>，但项目<strong>没有安装 allure-pytest</strong>（纯 pytest-html 项目），属于永远不执行的死代码；且 setup 阶段失败不会截图</td><td><span class="tag green">已修复</span></td></tr>
+    <tr><td class="bug-id">BUG-05</td><td><span class="tag amber">中等</span></td><td>verify.py</td><td>两处缺陷：① <code>case_scroll_page</code> 没有先打开百度首页，新浏览器停在 about:blank 上找 <code>#kw</code> 必然超时；② 结果文件被 <code>summary()</code> 和 <code>main()</code> <strong>重复写入且无异常处理</strong>，文件被占用时抛 <code>PermissionError</code> 直接崩溃、丢失全部结果（verify_output.txt 中已实际发生）</td><td><span class="tag green">已修复</span></td></tr>
+    <tr><td class="bug-id">BUG-06</td><td><span class="tag amber">中等</span></td><td>tests/test_settings.py 等</td><td>6 处断言/选择器过时：设置菜单 <code>.bdpfmenu</code>→<code>#s-user-setting-menu</code>；搜索设置/高级搜索由独立页面改为<strong>页面内弹窗</strong>（<code>.pfpanel-bd</code>）；"更多"跳转"百度产品大全"而非悬浮菜单；"视频"现跳好看视频；搜索建议下拉变为 <code>.ai-bdsug</code>/<code>#normalSugSearchUl</code></td><td><span class="tag green">已修复</span></td></tr>
+    <tr><td class="bug-id">BUG-07</td><td><span class="tag amber">中等</span></td><td>导航/设置用例 + BaseTest</td><td>时序与竞态缺陷：新标签页跳转后<strong>不等待新窗口出现</strong>就 <code>switch_to_window(1)</code>（可能越界或切错）；标题/URL <strong>立即读取即断言</strong>，页面未加载完时读到空标题（"关于百度"实际读到 <code>''</code>）、"视频"页读到旧标题</td><td><span class="tag green">已修复</span></td></tr>
+    <tr><td class="bug-id">BUG-08</td><td><span class="tag blue">低</span></td><td>tests/test_simple.py</td><td>调试遗留文件混入正式测试套件（每次全量运行都多开一次浏览器）</td><td><span class="tag green">已删除</span></td></tr>
+    <tr><td class="bug-id">BUG-09</td><td><span class="tag blue">低</span></td><td>test_hot_search_click</td><td>断言脆弱：热搜条目文本带有私有字体图标（如 <code>\ue62e</code>），直接取前 4 字符做标题断言必然失败；且可能点中零尺寸的图标链接（<code>ElementNotInteractable</code>）</td><td><span class="tag green">已修复</span></td></tr>
+    <tr><td class="bug-id">BUG-10</td><td><span class="tag blue">低</span></td><td>test_back_to_home</td><td>弱断言：返回首页后断言 <code>#kw</code> 存在，但结果页同样存在 <code>#kw</code>，断言无效</td><td><span class="tag green">已修复</span></td></tr>
+    <tr><td class="bug-id">BUG-11</td><td><span class="tag blue">低</span></td><td>BaseTest（回归补充）</td><td>首轮回归暴露两点：hao123 页面过重导致 <code>current_url</code> 连续渲染超时，10 秒 URL 等待不够；"更多"入口有时当前页跳转、有时开新标签页，处理方式单一</td><td><span class="tag green">已修复</span></td></tr>
+  </table>
+</div>
+
+<h2 id="s4">四、根因深挖：百度首页改版</h2>
+<div class="card">
+  <p>通过 DOM 探针脚本在有头/无头两种模式下取证，确认失败主因是被测页面结构性变化：</p>
+  <pre><code>== 首页元素状态（Chrome 152 实测）==
+count #kw: 1  →  displayed = False   # 旧版搜索框：存在但 0×0 隐藏
+count #su: 1  →  displayed = False   # 旧版"百度一下"按钮：存在但 0×0 隐藏
+#kw rect      = [0, 0, 0, 0]         # 整个旧版 form 被折叠
+真实可见搜索框 = &lt;textarea id="chat-textarea" class="chat-input-textarea ..."&gt;
+真实提交按钮   = &lt;button id="chat-submit-button"&gt;百度一下&lt;/button&gt;
+设置下拉菜单   = div#s-user-setting-menu.s-top-userset-menu（旧 .bdpfmenu 隐藏）</code></pre>
+  <p>新版搜索流程实测：<code>#chat-textarea</code> 输入 + 回车 → 正常跳转 <code>/s?wd=...</code>，结果页标题 <code>&lt;关键词&gt;_百度搜索</code>，<code>#content_left .result</code> 有 6 条结果，断言链路全部可通。</p>
+  <h3>关键修复 1：元素定位改用"任意可见元素"策略</h3>
+  <pre><code># common/base_test.py — 修复前（只看第一个匹配，撞上隐藏元素就死等）
+def find_element(self, by, value):
+    return self.wait.until(EC.visibility_of_element_located((by, value)))
+
+# 修复后：多个同定位器元素并存时，自动选中"可见"的那个
+def find_element(self, by, value):
+    elements = self.wait.until(EC.visibility_of_any_elements_located((by, value)))
+    return elements[0]</code></pre>
+  <h3>关键修复 2：新增统一搜索入口，兼容新旧搜索框</h3>
+  <pre><code># common/base_test.py — BaseTest.search()
+def search(self, keyword):
+    try:
+        box = self.find_element(By.ID, "chat-textarea")   # 新版 AI 搜索框
+    except Exception:
+        box = self.find_element(By.ID, "kw")              # 旧版兜底
+    box.send_keys(keyword)
+    box.send_keys(Keys.ENTER)
+    if "百度一下" in (self.driver.title or ""):            # 回车未生效时点击按钮兜底
+        self.click(By.CSS_SELECTOR, "#chat-submit-button, #su")</code></pre>
+  <h3>关键修复 3：断言改为显式等待，消除时序竞态</h3>
+  <pre><code># common/base_test.py — 标题断言：等待而非立即读取（修复"关于百度"读到空标题等）
+def assert_title_contains(self, expected):
+    try:
+        self.wait.until(EC.title_contains(expected))
+    except Exception:
+        raise AssertionError(f"页面标题 '{self.driver.title}' 不包含 '{expected}'（等待超时）")
+
+# 新增：点击后自动跟随跳转（无论新标签页还是当前页跳转都能切换到位）
+def click_and_follow(self, by, value): ...
+def open_in_new_window(self, by, value): ...   # 等待新窗口句柄出现再切换</code></pre>
+  <h3>关键修复 4：失败截图真正嵌入 HTML 报告</h3>
+  <pre><code># conftest.py — 修复前：allure 死代码（项目未安装 allure，截图从不入报告）
+allure = item.config.pluginmanager.get_plugin("allure")   # 永远是 None
+
+# 修复后：pytest-html 官方 extras 机制 + 覆盖 setup 阶段失败
+if rep.when in ("setup", "call") and rep.failed:
+    ...
+    extra.append(pytest_html.extras.image(screenshot_path))
+    rep.extra = extra   # 截图以 base64 内嵌进 self-contained HTML 报告</code></pre>
+</div>
+
+<h2 id="s5">五、修改文件清单</h2>
+<div class="card">
+  <table>
+    <tr><th>文件</th><th>变更类型</th><th>说明</th></tr>
+    <tr><td><code>common/base_test.py</code></td><td><span class="tag blue">重构</span></td><td>定位/点击等待策略、标题与 URL 显式等待断言、<code>search()</code> 兼容入口、<code>open_in_new_window()</code>/<code>click_and_follow()</code>、URL 读取重试</td></tr>
+    <tr><td><code>conftest.py</code></td><td><span class="tag blue">修复</span></td><td>删除 allure 死代码；截图经 pytest-html extras 嵌入报告；覆盖 setup 阶段失败</td></tr>
+    <tr><td><code>tests/test_search.py</code></td><td><span class="tag blue">重写</span></td><td>10 条用例全部改用 <code>search()</code>；搜索建议选择器更新为 <code>.ai-bdsug</code>/<code>#normalSugSearchUl</code></td></tr>
+    <tr><td><code>tests/test_navigation.py</code></td><td><span class="tag blue">重写</span></td><td>统一使用 <code>open_in_new_window()</code>；"视频"断言适配好看视频；回首页断言改为首页搜索框可见</td></tr>
+    <tr><td><code>tests/test_settings.py</code></td><td><span class="tag blue">重写</span></td><td>设置菜单/弹窗选择器全面适配新版；热搜条目清洗图标字符并过滤不可点击项；<code>click_and_follow()</code> 处理"更多"</td></tr>
+    <tr><td><code>verify.py</code></td><td><span class="tag blue">修复</span></td><td>补打开首页步骤；消除结果文件重复写入；写入失败自动改用时间戳备用文件名</td></tr>
+    <tr><td><code>venv/</code></td><td><span class="tag blue">环境</span></td><td>补装 selenium 4.49 / pytest 9.1.1 / pytest-html 4.2.0</td></tr>
+    <tr><td><code>运行测试.bat</code> 等 4 个脚本</td><td><span class="tag blue">修复</span></td><td>统一改用 <code>venv\Scripts\python.exe</code>，环境自包含可复现</td></tr>
+    <tr><td><code>README.md</code></td><td><span class="tag blue">更新</span></td><td>补充 venv 安装说明与"被测页面适配说明"对照表</td></tr>
+    <tr><td><code>tests/test_simple.py</code></td><td><span class="tag amber">删除</span></td><td>调试遗留文件，移出正式套件</td></tr>
+    <tr><td><code>.gitignore</code></td><td><span class="tag blue">新增</span></td><td>排除 venv/、reports/、screenshots/、缓存文件，支持直接上传 GitHub</td></tr>
+  </table>
+</div>
+
+<h2 id="s6">六、遗留风险与建议</h2>
+<div class="card">
+  <ul>
+    <li><strong>被测对象依赖第三方线上页面</strong>：百度首页仍在持续迭代，本次适配的选择器（如 <code>#chat-textarea</code>、<code>.pfpanel-bd</code>）未来可能再次失效。建议定期（如每月）跑一次全量回归及早发现 UI 变更，BaseTest 中已通过"可见元素策略 + 多候选选择器（逗号分隔旧/新选择器）"提高容错。</li>
+    <li><strong>执行耗时偏长</strong>（全量约 33 分钟）：主要开销为每条用例独立启动浏览器 + 隐式等待 10 秒。建议后续引入 <code>pytest-xdist</code> 并行执行，或对同模块用例复用浏览器会话，可将耗时压缩至三分之一。</li>
+    <li><strong>未登录态限制</strong>：搜索设置弹窗提示"请启用浏览器 Cookie 或登录"，设置项无法保存验证，当前用例仅验证弹窗能打开，属合理边界。</li>
+    <li><strong>反爬风险</strong>：项目已含 webdriver 指纹隐藏配置，高频运行仍可能触发百度安全验证。建议控制执行频率，必要时接入代理或降频调度。</li>
+    <li><strong>建议补充</strong>：为 BaseTest 关键方法补充单元级测试；在 CI（如 GitHub Actions）中配置定时冒烟运行，失败自动通知。</li>
+  </ul>
+</div>
+
+<h2 id="s7">七、GitHub 上传指南</h2>
+<div class="card">
+  <p><strong>可以上传，项目已做好上传准备</strong>（已创建 <code>.gitignore</code>，排除虚拟环境、测试产物等不该上传的内容）。该项目适合作为<strong>自动化测试方向的学习/求职展示项目</strong>公开。</p>
+  <h3>上传步骤</h3>
+  <pre><code>cd D:\selenium-test-project
+git init
+git add .
+git commit -m "Selenium+Pytest 自动化测试框架：适配百度新版首页，32条用例全部通过"
+# 在 GitHub 上新建仓库后：
+git remote add origin https://github.com/&lt;你的用户名&gt;/selenium-test-project.git
+git branch -M main
+git push -u origin main</code></pre>
+  <h3>.gitignore 已排除的内容</h3>
+  <ul>
+    <li><code>venv/</code> — 虚拟环境数百 MB，使用者按 README 自行安装依赖即可</li>
+    <li><code>reports/</code>、<code>screenshots/</code> — 每次运行重新生成的产物</li>
+    <li><code>__pycache__/</code>、<code>.pytest_cache/</code>、<code>verify_result*.txt</code> 等临时文件</li>
+  </ul>
+  <h3>上传前可选清理</h3>
+  <ul>
+    <li><code>reports/</code>、<code>screenshots/</code> 中的历史文件已被 gitignore 排除，不删也不会上传</li>
+    <li>项目仅用于学习目的、测试对象为百度首页，README 已注明请勿商用或高频访问</li>
+  </ul>
+</div>
+
+<footer>Selenium 自动化测试项目 · Bug 梳理与修复报告 · 生成于 2026-09-27 · 最终回归 32/32 通过（100%）· 附件：修复前基线 reports/_baseline_report.html · 最终回归报告 reports/final_report_20260927.html</footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Test artifacts
+screenshots/
+reports/*.html
+reports/*.xml
+verify_output.txt
+verify_result.txt
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DNStore
+Thumbs.db
+
+# TRAE
+.workbuddy/
